@@ -73,7 +73,6 @@ func (t *GTimer) Register(d uint32, f func(...interface{}), pri int32, args []in
 	node.expire = uint32(d) + t.Times
 	t.addNode(node)
 	t.lock.Unlock()
-	// fmt.Println(time.Now().Unix())
 	return node
 }
 
@@ -105,11 +104,8 @@ func (t *GTimer) cascade() {
 	} else {
 		time := ct >> TIME_NEAR_SHIFT
 		var i int = 0
-		// ct & (mask - 1) 取余，说明时间轮一层一圈遍历完成，而mask -1 应该根据层级变动。
 		for (ct & (mask - 1)) == 0 {
 			index := int(time & TIME_LEVEL_MASK)
-			//如果index == 0 ,说明当前层级 的所有index 都遍历完了，需要进入下一层级，在index 处将tick进行重排。
-			//如果index ！= 0，说明便利到当前index，将当前index中的所有tick进行重排。
 			if index != 0 {
 				t.moveList(i, index)
 				break
@@ -122,12 +118,9 @@ func (t *GTimer) cascade() {
 }
 
 func (t *GTimer) moveList(level, index int) {
-	// 取出当前index 中的 bucket
 	vec := t.Levels[level][index]
 	front := vec.Front()
-	// 重新实例化bucket
 	vec.Init()
-	// 将原bucket中的 tick 重新放入时间轮中：
 	for e := front; e != nil; e = e.Next() {
 		node := e.Value.(*TimerNode)
 		t.addNode(node)
@@ -140,10 +133,8 @@ func (t *GTimer) execute() {
 	if vec.Len() != 0 {
 		f := vec.Front()
 		vec.Init()
-		// 遍历分发超时任务不需要锁
 		t.lock.Unlock()
 		dispatchList(f)
-		// 分发完需要锁
 		t.lock.Lock()
 		return
 	}
@@ -153,7 +144,6 @@ func (t *GTimer) execute() {
 func dispatchList(front *list.Element) {
 	for element := front; element != nil; element = element.Next() {
 		n := element.Value.(*TimerNode)
-		//fmt.Println(time.Now().Unix())
 		n.F(n.Args)
 	}
 }
